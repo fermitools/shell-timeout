@@ -56,3 +56,5 @@ make test
 %config(noreplace) /etc/default/shell-timeout
 
 %changelog
+* Wed Dec 17 2025 Pat Riehecky <riehecky@fnal.gov> - 0.1.0-1
+* Initial build
