@@ -55,6 +55,10 @@ test-simple-config: test-basic-syntax | test-setup-podman
 	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/simple-config:/etc/default:ro,z" fedora:latest /bin/bash -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q x900x
 	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/simple-config:/etc/default:ro,z" fedora:latest /bin/bash -c 'source /shell-timeout.sh; unset TMOUT'
 
+test-csh:
+	# CSH
+	podman run -u 0:0    --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/simple-config:/etc/default:ro,z" fedora:latest /bin/bash -c 'yum --disablerepo=* --enablerepo=fedora install -y csh ; csh -c "source /shell-timeout.csh; set"'| grep -q xx
+
 test-tmout-is-float: | test-setup-podman
 	@echo ''
 	@echo '--------------------------------'
