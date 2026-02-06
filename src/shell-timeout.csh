@@ -148,12 +148,28 @@ if ( $_match == 0 && "$TMOUT_GIDS" != "" ) then
 endif
 
 # ----------------------------------------------------------------------
-# If a match was found, set TMOUT
+# If a match was found, set autologout
 # ----------------------------------------------------------------------
 if ( $_match == 1 ) then
-    setenv TMOUT $TMOUT_SECONDS
-    # C‑shell has no built‑in readonly for environment variables,
-    # so the readonly flag is ignored here.
+    @ _autologout_min = "$TMOUT_SECONDS" / 60
+
+    if ( $_autologout_min < 1 ) then
+        @ _autologout_min = 1
+    endif
+
+    set autologout = $_autologout_min
+
+    if ( $?TMOUT_READONLY ) then
+        switch ( "$TMOUT_READONLY" )
+            case yes:
+            case YES:
+            case true:
+            case TRUE:
+            case 1:
+                set -r autologout
+                breaksw
+        endsw
+    endif
 endif
 
 # ----------------------------------------------------------------------
@@ -163,6 +179,6 @@ unset BASECFG CFGDIR
 unset file line key value
 unset new_uids new_gids
 unset _match u g gid
-unset TMOUT_SECONDS TMOUT_READONLY
+unset TMOUT_SECONDS TMOUT_READONLY _autologout_min
 unset TMOUT_UIDS TMOUT_UIDS_NOCHECK TMOUT_GIDS TMOUT_GIDS_NOCHECK
 unset -f _parse_config trim
