@@ -9,46 +9,34 @@ set CFGDIR  = /etc/default/shell-timeout.d
 # ----------------------------------------------------------------------
 set TMOUT_SECONDS       = ""
 set TMOUT_READONLY      = ""
-set TMOUT_UIDS          = ""
-set TMOUT_UIDS_NOCHECK  = ""
-set TMOUT_GIDS          = ""
-set TMOUT_GIDS_NOCHECK  = ""
+set TMOUT_UIDS          = ()
+set TMOUT_UIDS_NOCHECK  = ()
+set TMOUT_GIDS          = ()
+set TMOUT_GIDS_NOCHECK  = ()
 
 # ----------------------------------------------------------------------
-# Helper: trim leading/trailing whitespace and surrounding quotes
+# Prepare config files list safely
 # ----------------------------------------------------------------------
-proc trim {
-    # $1 = string to trim
-    echo "$1" | \
-        sed -e 's/^[[:space:]]*//' \
-            -e 's/[[:space:]]*$//' \
-            -e 's/^["'"'"']//' \
-            -e 's/["'"'"']$//'
-}
-
-# ----------------------------------------------------------------------
-# Parse a single config file (KEY=VALUE lines, ignore comments)
-# ----------------------------------------------------------------------
-proc _parse_config {
-    set file = "$1"
-    if ( ! -r "$file" ) then
-        return
+set cfgs = ( $BASECFG )
+if ( -d $CFGDIR ) then
+    # Only add .conf files if they exist to avoid empty glob error
+    ls "$CFGDIR"/*.conf >& /dev/null
+    if ( $status == 0 ) then
+        set cfgs = ( $cfgs "$CFGDIR"/*.conf )
     endif
+endif
 
-    while ( "$<" "$file" )
-        set line = "$_"
+# ----------------------------------------------------------------------
+# Parse config files
+# ----------------------------------------------------------------------
+foreach cfg ( $cfgs )
+    if ( ! -r "$cfg" ) continue
 
-        # skip empty lines or lines that start with '#'
-        if ( "$line" == "" ) then continue; endif
-        if ( "$line[1]" == "#" ) then continue; endif
-
-        # split on the first '='
-        set key   = `echo "$line" | sed 's/=.*//'`
-        set value = `echo "$line" | sed 's/^[^=]*=//'`
-
-        # normalise using the trim function
-        set key   = `trim "$key"`
-        set value = `trim "$value"`
+    # Use grep to filter comments and blank lines
+    foreach line ( `grep -v '^\s*#' "$cfg" | grep -v '^\s*$'` )
+        # Extract key and value
+        set key = `echo $line | cut -d '=' -f 1`
+        set value = `echo $line | cut -d '=' -f 2- | sed 's/^[ \t]*//;s/[ \t]*$//' | sed 's/^"//;s/"$//' | sed 's/^'\''//;s/'\''$//'`
 
         switch ( "$key" )
             case TMOUT_SECONDS:
@@ -58,111 +46,86 @@ proc _parse_config {
                 set TMOUT_READONLY = "$value"
                 breaksw
             case TMOUT_UIDS:
-                set TMOUT_UIDS = "$TMOUT_UIDS $value"
+                set TMOUT_UIDS = ( $TMOUT_UIDS $value )
                 breaksw
             case TMOUT_UIDS_NOCHECK:
-                set TMOUT_UIDS_NOCHECK = "$TMOUT_UIDS_NOCHECK $value"
+                set TMOUT_UIDS_NOCHECK = ( $TMOUT_UIDS_NOCHECK $value )
                 breaksw
             case TMOUT_GIDS:
-                set TMOUT_GIDS = "$TMOUT_GIDS $value"
+                set TMOUT_GIDS = ( $TMOUT_GIDS $value )
                 breaksw
             case TMOUT_GIDS_NOCHECK:
-                set TMOUT_GIDS_NOCHECK = "$TMOUT_GIDS_NOCHECK $value"
+                set TMOUT_GIDS_NOCHECK = ( $TMOUT_GIDS_NOCHECK $value )
                 breaksw
         endsw
     end
-}
-
-# ----------------------------------------------------------------------
-# Load main config and any *.conf files in $CFGDIR
-# ----------------------------------------------------------------------
-if ( -r "$BASECFG" ) then
-    _parse_config "$BASECFG"
-endif
-
-if ( -d "$CFGDIR" ) then
-    foreach f ( "$CFGDIR"/*.conf )
-        if ( -r "$f" ) then
-            _parse_config "$f"
-        endif
-    end
-endif
-
-# ----------------------------------------------------------------------
-# Validate TMOUT_SECONDS (must be a positive integer)
-# ----------------------------------------------------------------------
-if ( "$TMOUT_SECONDS" !~ [0-9]* || "$TMOUT_SECONDS" == "" || "$TMOUT_SECONDS" == "0" ) then
-    exit 0
-endif
-
-# ----------------------------------------------------------------------
-# Normalise whitespace (collapse multiples, strip leading/trailing)
-# ----------------------------------------------------------------------
-set TMOUT_UIDS        = `echo $TMOUT_UIDS        | tr -s ' ' '\n' | sort -u | tr '\n' ' '`
-set TMOUT_UIDS_NOCHECK = `echo $TMOUT_UIDS_NOCHECK | tr -s ' ' '\n' | sort -u | tr '\n' ' '`
-set TMOUT_GIDS        = `echo $TMOUT_GIDS        | tr -s ' ' '\n' | sort -u | tr '\n' ' '`
-set TMOUT_GIDS_NOCHECK = `echo $TMOUT_GIDS_NOCHECK | tr -s ' ' '\n' | sort -u | tr '\n' ' '`
-
-# ----------------------------------------------------------------------
-# Apply removals
-# ----------------------------------------------------------------------
-set new_uids = ""
-foreach u ( $TMOUT_UIDS )
-    if ( "$TMOUT_UIDS_NOCHECK" !~ "* $u *" ) then
-        set new_uids = "$new_uids $u"
-    endif
 end
-set TMOUT_UIDS = "$new_uids"
 
-set new_gids = ""
-foreach g ( $TMOUT_GIDS )
-    if ( "$TMOUT_GIDS_NOCHECK" !~ "* $g *" ) then
-        set new_gids = "$new_gids $g"
-    endif
+# ----------------------------------------------------------------------
+# Validate TMOUT_SECONDS
+# ----------------------------------------------------------------------
+if ( "$TMOUT_SECONDS" !~ [0-9]* || "$TMOUT_SECONDS" == "" || "$TMOUT_SECONDS" == "0" ) exit
+if ( "$TMOUT_SECONDS" =~ *.* ) exit
+
+# ----------------------------------------------------------------------
+# Apply removals (pad with spaces for proper pattern matching)
+# ----------------------------------------------------------------------
+set check_uids = " $TMOUT_UIDS_NOCHECK "
+set uids = ()
+foreach u__ ( $TMOUT_UIDS )
+    if ( "$check_uids" !~ "* $u__ *" ) set uids = ( $uids $u__ )
 end
-set TMOUT_GIDS = "$new_gids"
+set TMOUT_UIDS = ( $uids )
+
+set check_gids = " $TMOUT_GIDS_NOCHECK "
+set gids = ()
+foreach g__ ( $TMOUT_GIDS )
+    if ( "$check_gids" !~ "* $g__ *" ) set gids = ( $gids $g__ )
+end
+set TMOUT_GIDS = ( $gids )
 
 # ----------------------------------------------------------------------
-# Matching logic – does the current user or any of its groups appear?
+# Match UID / GID
 # ----------------------------------------------------------------------
-set _match = 0
+set match = 0
+set CURRENT_UID = `id -u`
 
-# UID match
-foreach u ( $TMOUT_UIDS )
-    if ( "$u" == "$UID" ) then
-        set _match = 1
+foreach u__ ( $TMOUT_UIDS )
+    if ( "$u__" == "$CURRENT_UID" ) then
+        set match = 1
         break
     endif
 end
 
-# GID match (primary + supplementary)
-if ( $_match == 0 && "$TMOUT_GIDS" != "" ) then
-    foreach gid ( `id -G 2>/dev/null` )
-        foreach g ( $TMOUT_GIDS )
-            if ( "$g" == "$gid" ) then
-                set _match = 1
-                break 2
+if ( $match == 0 ) then
+    foreach gid ( `id -G` )
+        foreach g__ ( $TMOUT_GIDS )
+            if ( "$g__" == "$gid" ) then
+                set match = 1
+                break
             endif
         end
+        if ( $match == 1 ) break
     end
 endif
 
 # ----------------------------------------------------------------------
-# If a match was found, set TMOUT
+# Apply autologout
 # ----------------------------------------------------------------------
-if ( $_match == 1 ) then
-    setenv TMOUT $TMOUT_SECONDS
-    # C‑shell has no built‑in readonly for environment variables,
-    # so the readonly flag is ignored here.
+if ( $match ) then
+    @ autologout_min = $TMOUT_SECONDS / 60
+    if ( $autologout_min < 1 ) @ autologout_min = 1
+
+    # csh doesn't support read-only variables
+    set autologout = $autologout_min
 endif
 
 # ----------------------------------------------------------------------
-# Cleanup temporary variables
+# Cleanup
 # ----------------------------------------------------------------------
 unset BASECFG CFGDIR
-unset file line key value
-unset new_uids new_gids
-unset _match u g gid
 unset TMOUT_SECONDS TMOUT_READONLY
-unset TMOUT_UIDS TMOUT_UIDS_NOCHECK TMOUT_GIDS TMOUT_GIDS_NOCHECK
-unset -f _parse_config trim
+unset TMOUT_UIDS TMOUT_UIDS_NOCHECK
+unset TMOUT_GIDS TMOUT_GIDS_NOCHECK
+unset cfg line key value autologout_min
+unset uids gids u__ g__ gid match CURRENT_UID
