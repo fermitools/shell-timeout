@@ -43,7 +43,7 @@ _norm_list() {
 # Remove items in $2 from list $1
 _subtract_list() {
     _out=
-    for _i in $1; do
+    for _i in $(printf '%s\n' $1); do
         case " $2 " in
             *" ${_i} "*) ;;
             *) _out="${_out} ${_i}" ;;
@@ -58,7 +58,7 @@ _subtract_list() {
 [ -r "${BASECFG}" ] && _parse_config "${BASECFG}"
 
 if [ -d "${CFGDIR}" ]; then
-    for _f in "${CFGDIR}"/*.conf; do
+    for _f in $(printf '%s\n' "${CFGDIR}"/*.conf 2>/dev/null); do
         [ -r "${_f}" ] && _parse_config "${_f}"
     done
 fi
@@ -89,14 +89,14 @@ TMOUT_GIDS=$(_subtract_list "${TMOUT_GIDS}" "${TMOUT_GIDS_NOCHECK}")
 _match=
 
 # Does UID match?
-for _u in ${TMOUT_UIDS}; do
+for _u in $(printf '%s\n' ${TMOUT_UIDS}); do
     [ "${_u}" = "${UID}" ] && _match=yes && break
 done
 
 # Does GID (primary or secondary) match?
 if [ -z "${_match}" ] && [ -n "${TMOUT_GIDS}" ]; then
     for _gid in $(id -G 2>/dev/null); do
-        for _g in ${TMOUT_GIDS}; do
+        for _g in $(printf '%s\n' ${TMOUT_GIDS}); do
             [ "${_g}" = "${_gid}" ] && _match=yes && break 2
         done
     done
