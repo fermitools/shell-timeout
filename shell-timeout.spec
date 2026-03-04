@@ -30,14 +30,14 @@ after a configured period of inactivity.
 
 %install
 # these must be in /etc/profile.d to actually work
-install -m 644 -D src/shell-timeout.sh  %{buildroot}%{_sysconfdir}/profile.d/shell-timeout.sh
-install -m 644 -D src/shell-timeout.csh %{buildroot}%{_sysconfdir}/profile.d/shell-timeout.csh
+install -p -m 644 -D src/shell-timeout.sh  %{buildroot}%{_sysconfdir}/profile.d/shell-timeout.sh
+install -p -m 644 -D src/shell-timeout.csh %{buildroot}%{_sysconfdir}/profile.d/shell-timeout.csh
 
 # the scripts are hard coded to check
 #   /etc/default/shell-timeout
 #   /etc/default/shell-timeout.d
 # variables here would be counter-productive as they don't change the code
-install -m 644 -D conf/shell-timeout %{buildroot}/etc/default/shell-timeout
+install -p -m 644 -D conf/shell-timeout %{buildroot}/etc/default/shell-timeout
 mkdir %{buildroot}/etc/default/shell-timeout.d
 
 %check
