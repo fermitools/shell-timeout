@@ -7,12 +7,16 @@ set CFGDIR  = /etc/default/shell-timeout.d
 # ----------------------------------------------------------------------
 # Variables that will be filled while parsing the config files
 # ----------------------------------------------------------------------
-set TMOUT_SECONDS       = ""
-set TMOUT_READONLY      = ""
-set TMOUT_UIDS          = ()
-set TMOUT_UIDS_NOCHECK  = ()
-set TMOUT_GIDS          = ()
-set TMOUT_GIDS_NOCHECK  = ()
+set TMOUT_SECONDS           = ""
+set TMOUT_READONLY          = ""
+set TMOUT_UIDS              = ()
+set TMOUT_UIDS_NOCHECK      = ()
+set TMOUT_GIDS              = ()
+set TMOUT_GIDS_NOCHECK      = ()
+set TMOUT_USERNAMES         = ()
+set TMOUT_USERNAMES_NOCHECK = ()
+set TMOUT_GROUPS            = ()
+set TMOUT_GROUPS_NOCHECK    = ()
 
 # ----------------------------------------------------------------------
 # Prepare config files list safely
@@ -57,6 +61,18 @@ foreach cfg ( $cfgs )
             case TMOUT_GIDS_NOCHECK:
                 set TMOUT_GIDS_NOCHECK = ( $TMOUT_GIDS_NOCHECK $value )
                 breaksw
+            case TMOUT_USERNAMES:
+                set TMOUT_USERNAMES = ( $TMOUT_USERNAMES $value )
+                breaksw
+            case TMOUT_USERNAMES_NOCHECK:
+                set TMOUT_USERNAMES_NOCHECK = ( $TMOUT_USERNAMES_NOCHECK $value )
+                breaksw
+            case TMOUT_GROUPS:
+                set TMOUT_GROUPS = ( $TMOUT_GROUPS $value )
+                breaksw
+            case TMOUT_GROUPS_NOCHECK:
+                set TMOUT_GROUPS_NOCHECK = ( $TMOUT_GROUPS_NOCHECK $value )
+                breaksw
         endsw
     end
 end
@@ -66,6 +82,34 @@ end
 # ----------------------------------------------------------------------
 if ( "$TMOUT_SECONDS" !~ [0-9]* || "$TMOUT_SECONDS" == "" || "$TMOUT_SECONDS" == "0" ) exit
 if ( "$TMOUT_SECONDS" =~ *.* ) exit
+
+# ----------------------------------------------------------------------
+# Resolve usernames and group names to numeric IDs
+# ----------------------------------------------------------------------
+
+# Resolve usernames to UIDs and append to TMOUT_UIDS
+foreach n__ ( $TMOUT_USERNAMES )
+    set uid__ = ( `getent passwd "$n__" | cut -d: -f3` )
+    if ( $#uid__ >= 0 ) set TMOUT_UIDS = ( $TMOUT_UIDS $uid__ )
+end
+
+# Resolve nocheck usernames to UIDs and append to TMOUT_UIDS_NOCHECK
+foreach n__ ( $TMOUT_USERNAMES_NOCHECK )
+    set uid__ = ( `getent passwd "$n__" | cut -d: -f3` )
+    if ( $#uid__ >= 0 ) set TMOUT_UIDS_NOCHECK = ( $TMOUT_UIDS_NOCHECK $uid__ )
+end
+
+# Resolve group names to GIDs and append to TMOUT_GIDS
+foreach n__ ( $TMOUT_GROUPS )
+    set gid__ = ( `getent group "$n__" | cut -d: -f3` )
+    if ( $#gid__ >= 0 ) set TMOUT_GIDS = ( $TMOUT_GIDS $gid__ )
+end
+
+# Resolve nocheck group names to GIDs and append to TMOUT_GIDS_NOCHECK
+foreach n__ ( $TMOUT_GROUPS_NOCHECK )
+    set gid__ = ( `getent group "$n__" | cut -d: -f3` )
+    if ( $#gid__ >= 0 ) set TMOUT_GIDS_NOCHECK = ( $TMOUT_GIDS_NOCHECK $gid__ )
+end
 
 # ----------------------------------------------------------------------
 # Apply removals (pad with spaces for proper pattern matching)
@@ -127,5 +171,8 @@ unset BASECFG CFGDIR
 unset TMOUT_SECONDS TMOUT_READONLY
 unset TMOUT_UIDS TMOUT_UIDS_NOCHECK
 unset TMOUT_GIDS TMOUT_GIDS_NOCHECK
+unset TMOUT_USERNAMES TMOUT_USERNAMES_NOCHECK
+unset TMOUT_GROUPS TMOUT_GROUPS_NOCHECK
 unset cfg line key value autologout_min
 unset uids gids u__ g__ gid match CURRENT_UID
+unset n__ uid__ gid__
