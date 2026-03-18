@@ -20,12 +20,12 @@ man/shell-timeout.conf.5: docs/shell-timeout.conf.5.adoc
 ifdef ASCIIDOCTOR
 	asciidoctor -b manpage -o $@ $<
 else ifdef ASCIIDOC
-	asciidoc -b manpage -o $@ $<
+	a2x -f manpage -D man $<
 else
 	$(error Neither asciidoctor nor asciidoc found; install one to build the man page)
 endif
 
-sources: man
+sources:
 	@echo "You found my koji hook"
 	@mkdir -p build/$(name)-$(version)/src/
 	@cp src/* build/$(name)-$(version)/src/
@@ -33,9 +33,6 @@ sources: man
 	@cp conf/* build/$(name)-$(version)/conf/
 	@mkdir -p build/$(name)-$(version)/docs/
 	@cp docs/* build/$(name)-$(version)/docs/
-	@mkdir -p build/$(name)-$(version)/man/
-	@cp man/shell-timeout.conf.5 build/$(name)-$(version)/man/
-	@cp README.md build/$(name)-$(version)/
 	@cp LICENSE build/$(name)-$(version)/
 	cd build ; tar cf - $(name)-$(version) | gzip --best > $(current_dir)/$(version).tar.gz
 	rm -rf build
@@ -49,7 +46,7 @@ rpm: sources
 	rpmbuild -bb --define '_rpmdir $(current_dir)/RPMS' --define '_builddir $(current_dir)/BUILD' --define '_sourcedir $(current_dir)' $(name).spec
 
 TEST_TARGETS := $(shell grep -E '^test-[a-zA-Z0-9_-]+:' $(firstword $(MAKEFILE_LIST)) | cut -d: -f1 | sort -u)
-test: $(TEST_TARGETS)
+test: shfmt $(TEST_TARGETS)
 
 test-basic-syntax:
 	@echo ''
@@ -58,19 +55,19 @@ test-basic-syntax:
 	@echo '--------------------------------'
 	bash -n $(current_dir)/src/shell-timeout.sh
 
-test-shellcheck: test-basic-syntax
-	@echo ''
-	@echo '--------------------------------'
-	@echo 'test shellcheck'
-	@echo '--------------------------------'
-	shellcheck $(current_dir)/src/shell-timeout.sh
-
-test-shfmt: test-basic-syntax
+shfmt: test-basic-syntax
 	@echo ''
 	@echo '--------------------------------'
 	@echo 'test shfmt'
 	@echo '--------------------------------'
 	shfmt -d -i 4 -ci $(current_dir)/src/shell-timeout.sh
+
+test-shellcheck: | test-basic-syntax
+	@echo ''
+	@echo '--------------------------------'
+	@echo 'test shellcheck'
+	@echo '--------------------------------'
+	shellcheck $(current_dir)/src/shell-timeout.sh
 
 test-setup-podman: | test-basic-syntax
 	@echo ''

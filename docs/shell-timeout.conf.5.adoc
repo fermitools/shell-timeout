@@ -1,0 +1,254 @@
+= shell-timeout.conf(5)
+
+== NAME
+
+shell-timeout.conf - configuration file for the shell-timeout inactivity scripts
+
+== SYNOPSIS
+
+_/etc/default/shell-timeout_
+
+_/etc/default/shell-timeout.d/*.conf_
+
+== DESCRIPTION
+
+*shell-timeout.conf* is the configuration file for the *shell-timeout.sh*(7)
+(bash/zsh) and *shell-timeout.csh*(7) (csh/tcsh) scripts.
+These scripts automatically set an inactivity timeout for interactive shells
+when the current user matches a configured UID, GID, username, or group name.
+
+The main configuration file is _/etc/default/shell-timeout_.
+Additional drop-in configuration files may be placed in
+_/etc/default/shell-timeout.d/*.conf_.
+Drop-ins are processed in alphabetical order after the main file.
+Values from later files extend (not replace) the lists from earlier ones,
+so a drop-in can add or remove entries without rewriting the base configuration.
+
+== FILE FORMAT
+
+Configuration files use a shell-neutral *KEY=VALUE* format.
+
+* One key-value pair per line.
+* Keys and values are separated by a single *=* with no surrounding spaces.
+* Values may be optionally quoted with single or double quotes.
+* Multiple space-separated items may appear in a single value field.
+* Lines beginning with *#* are comments and are ignored.
+* Empty lines are ignored.
+
+.Example
+----
+# Timeout all users who are members of the "staff" group
+TMOUT_SECONDS=900
+TMOUT_GROUPS=staff
+TMOUT_READONLY=yes
+----
+
+== CONFIGURATION VARIABLES
+
+=== Timeout duration
+
+*TMOUT_SECONDS* = _integer_::
+  The inactivity timeout in seconds.
+  Must be a positive integer greater than zero.
+  Non-integer, zero, negative, and empty values cause the scripts to
+  exit without setting any timeout.
+  In *csh* and *tcsh* the value is converted to minutes (rounded down,
+  minimum 1 minute).
+
+=== Readonly enforcement
+
+*TMOUT_READONLY* = _yes_ | _true_ | _1_ | _no_ | _false_ | _0_::
+  When set to *yes*, *true*, or *1*, the timeout variable is made read-only
+  after being set, preventing users from disabling it.
+  This option is silently ignored in *csh* and *tcsh*, which do not support
+  read-only shell variables.
+
+=== Matching by numeric UID or GID
+
+*TMOUT_UIDS* = _uid_ [_uid_ ...]::
+  Space-separated list of numeric user IDs.
+  Any user whose effective UID appears in this list will have the timeout set.
+  Values from multiple configuration files are merged together.
+
+*TMOUT_GIDS* = _gid_ [_gid_ ...]::
+  Space-separated list of numeric group IDs.
+  Any user whose primary *or* supplementary GID appears in this list will
+  have the timeout set.
+  Values from multiple configuration files are merged together.
+
+=== Matching by username or group name
+
+*TMOUT_USERNAMES* = _name_ [_name_ ...]::
+  Space-separated list of usernames.
+  Each name is resolved to a numeric UID at runtime via *id*(1).
+  Names that cannot be resolved are silently ignored.
+  The resolved UIDs are merged into *TMOUT_UIDS* before matching.
+
+*TMOUT_GROUPS* = _name_ [_name_ ...]::
+  Space-separated list of group names.
+  Each name is resolved to a numeric GID at runtime via *getent*(1).
+  Names that cannot be resolved are silently ignored.
+  The resolved GIDs are merged into *TMOUT_GIDS* before matching.
+
+=== Removing entries from consideration (numeric)
+
+*TMOUT_UIDS_NOCHECK* = _uid_ [_uid_ ...]::
+  Space-separated list of numeric UIDs to remove from *TMOUT_UIDS*.
+  A user whose UID is removed from the UID list will not match via the UID
+  path, but may still match via the GID path if their group is configured.
+
+*TMOUT_GIDS_NOCHECK* = _gid_ [_gid_ ...]::
+  Space-separated list of numeric GIDs to remove from *TMOUT_GIDS*.
+  A GID removed from the GID list will not cause a match via the GID path,
+  but users whose UIDs are still in *TMOUT_UIDS* will continue to match.
+
+=== Removing entries from consideration (by name)
+
+*TMOUT_USERNAMES_NOCHECK* = _name_ [_name_ ...]::
+  Space-separated list of usernames to remove from consideration.
+  Each name is resolved to a numeric UID at runtime and merged into
+  *TMOUT_UIDS_NOCHECK*.
+  Numeric IDs and names may be freely mixed across files.
+
+*TMOUT_GROUPS_NOCHECK* = _name_ [_name_ ...]::
+  Space-separated list of group names to remove from consideration.
+  Each name is resolved to a numeric GID at runtime and merged into
+  *TMOUT_GIDS_NOCHECK*.
+  Numeric IDs and names may be freely mixed across files.
+
+=== Readonly exemptions (numeric)
+
+*TMOUT_UIDS_NOREADONLY* = _uid_ [_uid_ ...]::
+  Space-separated list of numeric UIDs that are exempt from readonly
+  enforcement.
+  When *TMOUT_READONLY* is set, a user whose UID appears in this list
+  will still have *TMOUT* set to *TMOUT_SECONDS*, but it will **not** be
+  made readonly.
+  This option is silently ignored in *csh* and *tcsh*.
+
+*TMOUT_GIDS_NOREADONLY* = _gid_ [_gid_ ...]::
+  Space-separated list of numeric GIDs exempt from readonly enforcement.
+  A user whose primary or supplementary GID appears in this list will
+  have *TMOUT* set but not locked.
+  This option is silently ignored in *csh* and *tcsh*.
+
+=== Readonly exemptions (by name)
+
+*TMOUT_USERNAMES_NOREADONLY* = _name_ [_name_ ...]::
+  Space-separated list of usernames exempt from readonly enforcement.
+  Each name is resolved to a numeric UID at runtime and merged into
+  *TMOUT_UIDS_NOREADONLY*.
+
+*TMOUT_GROUPS_NOREADONLY* = _name_ [_name_ ...]::
+  Space-separated list of group names exempt from readonly enforcement.
+  Each name is resolved to a numeric GID at runtime and merged into
+  *TMOUT_GIDS_NOREADONLY*.
+
+== MATCHING SEMANTICS
+
+The UID and GID matching paths are *fully independent*.
+
+Removing an entry from the UID list (via *TMOUT_UIDS_NOCHECK* or
+*TMOUT_USERNAMES_NOCHECK*) has no effect on GID matching, and vice versa.
+A user whose UID has been explicitly excluded can still have the timeout
+applied because one of their groups is listed in *TMOUT_GIDS*.
+
+Name resolution occurs before list subtraction.
+The effective evaluation order is:
+
+. Accumulate all *TMOUT_UIDS* and *TMOUT_USERNAMES* values from all
+  configuration files (main + drop-ins).
+. Resolve each username to its numeric UID.
+. Accumulate all *TMOUT_UIDS_NOCHECK* and *TMOUT_USERNAMES_NOCHECK* values
+  and resolve usernames to UIDs.
+. Subtract the NOCHECK UIDs from the UID list.
+. Repeat steps 1-4 for GIDs and group names.
+. Compare the current user's UID and all their GIDs against the final lists.
+. If a match is found, set *TMOUT* to *TMOUT_SECONDS*.
+. If *TMOUT_READONLY* is set, check whether the user's UID is in
+  *TMOUT_UIDS_NOREADONLY* (after resolving *TMOUT_USERNAMES_NOREADONLY*)
+  or any of their GIDs is in *TMOUT_GIDS_NOREADONLY* (after resolving
+  *TMOUT_GROUPS_NOREADONLY*).
+  If exempt, *TMOUT* is left writable; otherwise it is made readonly.
+
+== EXAMPLES
+
+=== Timeout all members of a group, exempt one user
+
+_/etc/default/shell-timeout_:
+----
+TMOUT_SECONDS=900
+TMOUT_GROUPS=employees
+TMOUT_READONLY=yes
+----
+
+_/etc/default/shell-timeout.d/exceptions.conf_:
+----
+# Service account does not need a timeout
+TMOUT_USERNAMES_NOCHECK=svcaccount
+----
+
+=== Mix numeric IDs and names
+
+----
+TMOUT_SECONDS=600
+TMOUT_UIDS=1042
+TMOUT_USERNAMES=alice bob
+TMOUT_GIDS=500
+TMOUT_GROUPS=contractors
+----
+
+=== Drop-in adds a group, removes one user from a different drop-in
+
+_/etc/default/shell-timeout.d/10-base.conf_:
+----
+TMOUT_GROUPS=staff
+----
+
+_/etc/default/shell-timeout.d/20-exceptions.conf_:
+----
+# Remove a specific user added by an earlier drop-in
+TMOUT_UIDS_NOCHECK=1099
+----
+
+=== Global readonly with per-user exemption
+
+_/etc/default/shell-timeout_:
+----
+TMOUT_SECONDS=900
+TMOUT_GROUPS=employees
+TMOUT_READONLY=yes
+----
+
+_/etc/default/shell-timeout.d/sysadmin-noreadonly.conf_:
+----
+# Sysadmins can adjust or unset their own timeout
+TMOUT_GROUPS_NOREADONLY=sysadmins
+# A specific service account by name
+TMOUT_USERNAMES_NOREADONLY=deploy-bot
+----
+
+== FILES
+
+_/etc/default/shell-timeout_::
+  Main configuration file.
+
+_/etc/default/shell-timeout.d/*.conf_::
+  Drop-in configuration files, processed in alphabetical order.
+
+_/etc/profile.d/shell-timeout.sh_::
+  POSIX shell (bash/zsh) script sourced at login.
+
+_/etc/profile.d/shell-timeout.csh_::
+  C shell (csh/tcsh) script sourced at login.
+
+== SEE ALSO
+
+*id*(1), *getent*(1), *bash*(1), *zsh*(1), *csh*(1), *tcsh*(1)
+
+== NOTES
+
+The *csh* and *tcsh* interpreters do not support read-only variables;
+*TMOUT_READONLY* has no effect in those shells.
+The inactivity timeout is implemented via the *autologout* shell variable,
+which is the number of minutes of idle time before logout (minimum 1).

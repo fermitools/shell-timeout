@@ -2,6 +2,7 @@ RPMS/*
 SRPMS/*
 BUILD/*
 build/*
+man/*
 *.tar.gz
 *.rpm
 .*.sw[po]
