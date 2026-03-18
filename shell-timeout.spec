@@ -11,9 +11,10 @@ Url:		https://github.com/fermitools/shell-timeout
 Source:		%{url}/archive/%{version}/%{name}-%{version}.tar.gz
 
 Requires:	coreutils filesystem sed
-BuildRequires:  make grep
+BuildRequires:  make bash grep shellcheck shfmt
+BuildRequires:  (rubygem-asciidoctor or asciidoc)
 %if %{with tests}
-BuildRequires:	podman shellcheck shfmt
+BuildRequires:	podman
 %endif
 
 Summary:	A simple set of scripts for setting shell timeout automatically
@@ -28,11 +29,13 @@ after a configured period of inactivity.
 %autosetup
 
 %build
+make man shfmt
 
 %install
 # these must be in /etc/profile.d to actually work
 install -p -m 644 -D src/shell-timeout.sh  %{buildroot}%{_sysconfdir}/profile.d/shell-timeout.sh
 install -p -m 644 -D src/shell-timeout.csh %{buildroot}%{_sysconfdir}/profile.d/shell-timeout.csh
+install -p -m 644 -d man/shell-timeout.conf.5 %{buildroot}%{_mandir}/man5/
 
 # the scripts are hard coded to check
 #   /etc/default/shell-timeout
@@ -44,11 +47,14 @@ mkdir %{buildroot}/etc/default/shell-timeout.d
 %check
 %if %{with tests}
 make test
+%else
+make test-shellcheck
 %endif
 
 %files
 %license LICENSE
-%doc README.md
+%doc docs/README.md
+%doc %{_mandir}/man5/*
 %{_sysconfdir}/profile.d/shell-timeout.sh
 %{_sysconfdir}/profile.d/shell-timeout.csh
 %config(noreplace) /etc/default/shell-timeout
