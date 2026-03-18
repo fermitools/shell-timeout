@@ -28,8 +28,8 @@ rpm: sources
 	@echo "You found my 'just build it' hook"
 	rpmbuild -bb --define '_rpmdir $(current_dir)/RPMS' --define '_builddir $(current_dir)/BUILD' --define '_sourcedir $(current_dir)' $(name).spec
 
-# TODO: make this smart enough to find and include test- targets
-test: test-shellcheck test-shfmt test-simple-config test-tmout-is-float test-tmout-is-negative test-tmout-is-not-readonly test-tmout-is-readonly test-tmout-is-unset test-tmout-is-zero test-config-includes-change-readonly test-config-includes-change-tmout test-config-includes-conf-only test-config-includes-extra-gid test-config-includes-extra-gid-removes-gid test-config-includes-extra-uid test-config-includes-extra-uid-removes-uid
+TEST_TARGETS := $(shell grep -E '^test-[a-zA-Z0-9_-]+:' $(firstword $(MAKEFILE_LIST)) | cut -d: -f1 | sort -u)
+test: $(TEST_TARGETS)
 
 test-basic-syntax:
 	@echo ''
