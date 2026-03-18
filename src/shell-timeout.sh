@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # ----------------------------------------------------------------------
 # Default configuration locations
 # ----------------------------------------------------------------------
@@ -36,6 +37,7 @@ _parse_config() {
 
 # Normalize whitespace for cleanup
 _norm_list() {
+    # shellcheck disable=SC2086
     set -- $1
     printf '%s\n' "$*"
 }
@@ -43,7 +45,9 @@ _norm_list() {
 # Remove items in $2 from list $1
 _subtract_list() {
     _out=
+    # shellcheck disable=SC2086
     for _i in $(printf '%s\n' $1); do
+        # shellcheck disable=SC2086
         case " $2 " in
             *" ${_i} "*) ;;
             *) _out="${_out} ${_i}" ;;
@@ -66,6 +70,7 @@ fi
 # ----------------------------------------------------------------------
 # Validate TMOUT_SECONDS (must be a positive integer)
 # ----------------------------------------------------------------------
+# shellcheck disable=SC2317
 case ${TMOUT_SECONDS-} in
     '' | *[!0-9]* | 0) return 0 2>/dev/null || exit 0 ;;
 esac
@@ -89,6 +94,7 @@ TMOUT_GIDS=$(_subtract_list "${TMOUT_GIDS}" "${TMOUT_GIDS_NOCHECK}")
 _match=
 
 # Does UID match?
+# shellcheck disable=SC2086
 for _u in $(printf '%s\n' ${TMOUT_UIDS}); do
     [ "${_u}" = "${UID}" ] && _match=yes && break
 done
@@ -96,6 +102,7 @@ done
 # Does GID (primary or secondary) match?
 if [ -z "${_match}" ] && [ -n "${TMOUT_GIDS}" ]; then
     for _gid in $(id -G 2>/dev/null); do
+        # shellcheck disable=SC2086
         for _g in $(printf '%s\n' ${TMOUT_GIDS}); do
             [ "${_g}" = "${_gid}" ] && _match=yes && break 2
         done
