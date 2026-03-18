@@ -1,0 +1,3 @@
+TMOUT_SECONDS=900
+TMOUT_USERNAMES=testuser1 testuser2
+TMOUT_GROUPS=testgroup1 testgroup2

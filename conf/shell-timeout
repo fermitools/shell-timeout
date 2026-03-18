@@ -8,17 +8,34 @@ TMOUT_SECONDS=0
 # Values other than: `yes`, `true`, or `1` are treated as `no`
 TMOUT_READONLY=no
 
-# List of UID/GID to setup timeout consideration
+# List of UIDs/GIDs to apply timeout consideration
 #
 # Format is space-separated numeric IDs
 # Content of drop-ins will be appended
 TMOUT_UIDS=""
 TMOUT_GIDS=""
 
-# List of UID/GID to remove from consideration
+# List of usernames/group names to apply timeout consideration
+# These are resolved to numeric UIDs/GIDs at runtime
+#
+# Format is space-separated names
+# Content of drop-ins will be appended
+TMOUT_USERNAMES=""
+TMOUT_GROUPS=""
+
+# List of UIDs/GIDs to remove from consideration
 # Useful when an earlier drop-in adds a user you want to exclude
 #
 # Format is space-separated numeric IDs
 # Content of drop-ins will be appended
 TMOUT_UIDS_NOCHECK=""
 TMOUT_GIDS_NOCHECK=""
+
+# List of usernames/group names to remove from consideration
+# These are resolved to numeric UIDs/GIDs at runtime
+# Useful when an earlier drop-in adds a user you want to exclude
+#
+# Format is space-separated names
+# Content of drop-ins will be appended
+TMOUT_USERNAMES_NOCHECK=""
+TMOUT_GROUPS_NOCHECK=""

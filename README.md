@@ -11,7 +11,8 @@ These scripts automatically set shell timeout values based on User ID (UID) or G
 ## Features
 
 - UID and/or GID-based timeout configuration
-- Additive and subtractive list management
+- Username and group name-based timeout configuration (resolved to UIDs/GIDs at runtime)
+- Additive and subtractive list management (mix numeric IDs and names freely)
 - Validation of timeout values (positive integers only)
 - Can set timeout to readonly (bash/zsh)
 
@@ -88,11 +89,15 @@ Additional configurations can be placed in `/etc/default/shell-timeout.d/*.conf`
 
 Example `/etc/default/shell-timeout.d/developers.conf`:
 ```ini
-# Add developer group to timeout list
-TMOUT_GIDS=500
+# Add a specific user to timeout list by name
+TMOUT_USERNAMES=jsmith
 
-# Remove specific user from timeout
+# Add developer group by name
+TMOUT_GROUPS=developers
+
+# Remove specific user from timeout (by UID or name)
 TMOUT_UIDS_NOCHECK=1000
+TMOUT_USERNAMES_NOCHECK=alice
 ```
 
 **Note:** Later configuration files extend earlier ones. Drop-in files are processed in alphabetical order.
@@ -100,33 +105,47 @@ TMOUT_UIDS_NOCHECK=1000
 
 ### Configuration Variables
 
-|  Variable            |  Description  |
-|----------------------|---------------|
-| `TMOUT_SECONDS`      | Timeout duration in seconds (must be positive integer)                   |
-| `TMOUT_READONLY`     | Set to `yes`/`true`/`1` to make timeout readonly - **POSIX shells only** |
-| `TMOUT_UIDS`         | Base list of UIDs to apply timeout, all values are merged together       |
-| `TMOUT_GIDS`         | Base list of GIDs to apply timeout, all values are merged together       |
-| `TMOUT_UIDS_NOCHECK` | UIDs to remove from the final list of explicitly added IDs, all values are merged together |
-| `TMOUT_GIDS_NOCHECK` | GIDs to remove from the final list of explicitly added IDs, all values are merged together |
+|  Variable                   |  Description  |
+|-----------------------------|---------------|
+| `TMOUT_SECONDS`             | Timeout duration in seconds (must be positive integer)                   |
+| `TMOUT_READONLY`            | Set to `yes`/`true`/`1` to make timeout readonly - **POSIX shells only** |
+| `TMOUT_UIDS`                | Space-separated UIDs to apply timeout; all values merged                 |
+| `TMOUT_GIDS`                | Space-separated GIDs to apply timeout; all values merged                 |
+| `TMOUT_USERNAMES`           | Space-separated usernames to apply timeout; resolved to UIDs at runtime  |
+| `TMOUT_GROUPS`              | Space-separated group names to apply timeout; resolved to GIDs at runtime |
+| `TMOUT_UIDS_NOCHECK`        | UIDs to remove from consideration; all values merged                     |
+| `TMOUT_GIDS_NOCHECK`        | GIDs to remove from consideration; all values merged                     |
+| `TMOUT_USERNAMES_NOCHECK`   | Usernames to remove from consideration; resolved to UIDs at runtime      |
+| `TMOUT_GROUPS_NOCHECK`      | Group names to remove from consideration; resolved to GIDs at runtime    |
+
+Numeric IDs (`TMOUT_UIDS`, `TMOUT_GIDS` and their `_NOCHECK` variants) and name-based
+entries (`TMOUT_USERNAMES`, `TMOUT_GROUPS` and their `_NOCHECK` variants) can be mixed
+freely - they are resolved to the same internal lists before matching.
 
 ## How It Works
 
 1. Scripts load configuration from `/etc/default/shell-timeout`
 2. Drop-in configs from `/etc/default/shell-timeout.d/*.conf` are sourced
-3. UID/GID lists are merged (base + add - remove)
-4. `TMOUT_SECONDS` is validated (must be positive integer)
-5. Current user's UID and GID (including secondary groups) are checked against configured lists
-6. If match found, timeout is set:
+3. Usernames in `TMOUT_USERNAMES`/`TMOUT_USERNAMES_NOCHECK` are resolved to UIDs via `getent passwd`
+4. Group names in `TMOUT_GROUPS`/`TMOUT_GROUPS_NOCHECK` are resolved to GIDs via `getent group`
+5. UID/GID lists are merged (base + name-resolved + drop-ins) then NOCHECK removals applied
+6. `TMOUT_SECONDS` is validated (must be positive integer)
+7. Current user's UID and GIDs (primary + secondary) are checked against the final lists
+8. If a match is found, timeout is set:
    - **POSIX shells**: Sets `TMOUT` environment variable (in seconds)
    - **C shells**: Sets `autologout` variable (converted to minutes, minimum 1)
 
-The `TMOUT_UIDS` and `TMOUT_GIDS` look for exact matches from their list of IDs.
-The `_NOCHECK` keys remove elements from those lists, but do not prevent other
-attributes from matching. The listed items are not checked - not vetoed.
+The UID and GID matching paths are **fully independent**: removing an entry from
+the UID list (via `TMOUT_UIDS_NOCHECK` or `TMOUT_USERNAMES_NOCHECK`) has no effect
+on GID matching, and vice versa.
+
+The `_NOCHECK` keys remove elements from the resolved UID/GID lists - they do not
+act as a veto against the *other* list. A user whose UID is in `TMOUT_UIDS_NOCHECK`
+can still have their timeout set via a GID match.
 
 ### Example:
 
-If you have groups of `0`, `100`, `1000`, each of the following configs would match your account.
+If you have groups of `0`, `100`, `1000`, each of the following configs would match your account and are functionally equal.
 
 ```ini
 TMOUT_GIDS=0
@@ -134,19 +153,13 @@ TMOUT_GIDS=0
 
 ```ini
 TMOUT_GIDS=0 100
-```
-
-```ini
-TMOUT_GIDS=0 100
-TMOUT_GIDS_NOCHECK=1000
+TMOUT_GIDS_NOCHECK=100
 ```
 
 ```ini
 TMOUT_GIDS=0 100 1000
-TMOUT_GIDS_NOCHECK=1000
+TMOUT_GIDS_NOCHECK=100 1000
 ```
-
-The final three cases are functionally equivalent.
 
 ## Shell Differences
 
@@ -181,14 +194,15 @@ TMOUT_GIDS=100 200
 
 `/etc/default/shell-timeout.d/exceptions.conf`:
 ```ini
-# Add audit group
-TMOUT_GIDS=300
+# Add audit group by name
+TMOUT_GROUPS=auditors
 
-# Remove specific power users
+# Remove specific power users (mix of numeric and name)
 TMOUT_UIDS_NOCHECK=1050 1051
+TMOUT_USERNAMES_NOCHECK=trusted
 ```
 
-### Example 3: Multiple UIDs with exceptions
+### Example 3: Multiple UIDs/usernames with exceptions
 
 `/etc/default/shell-timeout`:
 ```ini
@@ -198,8 +212,8 @@ TMOUT_UIDS=1000 1001 1002 1003 1004
 
 `/etc/default/shell-timeout.d/admin-exception.conf`:
 ```ini
-# Remove admins from timeout
-TMOUT_UIDS_NOCHECK=1000 1001
+# Remove admins by name (equivalent to removing their UIDs)
+TMOUT_USERNAMES_NOCHECK=alice bob
 ```
 
 ## Validation
@@ -218,20 +232,20 @@ Invalid values cause the script to exit without setting a timeout.
   - "C shells" cannot enforce readonly - consider this when choosing the default shells for security-sensitive accounts
 - Timeouts apply per-shell session, not per SSH connection or shell scripts
   - Consider combining with SSH timeout settings for comprehensive idle timeout
-- Users can still use screen/tmux to maintain sessions, but idle shells may still terminate
+- Users can still use screen/tmux to maintain sessions, but idle shells may still terminate as it is a property of the shell itself
 
 ## Troubleshooting
 
 ### Timeout not applied
 - Check that user's UID or GID is in the configured lists
 - Verify configuration file syntax (no syntax errors)
-- Test with: `id` to see user's UID and GIDs
+- Test with: `getent` or `id` to see user's UID and GIDs
 - Source the script manually to see any errors
 
 ### Timeout applied when unexpected
 - Remember the `_NOCHECK` element state that the ID will not be explicitly selected
 - Verify configuration file syntax (no syntax errors)
-- Test with: `id` to see user's UID and GIDs
+- Test with: `getent` or `id` to see user's UID and GIDs
 - Verify no secondary group is in the configutation
 - Source the script manually to see any errors
 

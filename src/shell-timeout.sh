@@ -31,6 +31,10 @@ _parse_config() {
             TMOUT_UIDS_NOCHECK) TMOUT_UIDS_NOCHECK="${TMOUT_UIDS_NOCHECK-} ${_value}" ;;
             TMOUT_GIDS) TMOUT_GIDS="${TMOUT_GIDS-} ${_value}" ;;
             TMOUT_GIDS_NOCHECK) TMOUT_GIDS_NOCHECK="${TMOUT_GIDS_NOCHECK-} ${_value}" ;;
+            TMOUT_USERNAMES) TMOUT_USERNAMES="${TMOUT_USERNAMES-} ${_value}" ;;
+            TMOUT_USERNAMES_NOCHECK) TMOUT_USERNAMES_NOCHECK="${TMOUT_USERNAMES_NOCHECK-} ${_value}" ;;
+            TMOUT_GROUPS) TMOUT_GROUPS="${TMOUT_GROUPS-} ${_value}" ;;
+            TMOUT_GROUPS_NOCHECK) TMOUT_GROUPS_NOCHECK="${TMOUT_GROUPS_NOCHECK-} ${_value}" ;;
         esac
     done <"$1"
 }
@@ -74,6 +78,38 @@ fi
 case ${TMOUT_SECONDS-} in
     '' | *[!0-9]* | 0) return 0 2>/dev/null || exit 0 ;;
 esac
+
+# ----------------------------------------------------------------------
+# Resolve usernames and group names to numeric IDs
+# ----------------------------------------------------------------------
+
+# Resolve usernames to UIDs and append to TMOUT_UIDS
+# shellcheck disable=SC2086
+for _name in $(printf '%s\n' ${TMOUT_USERNAMES-}); do
+    _uid=$(getent passwd "${_name}" 2>/dev/null | cut -d: -f3)
+    [ -n "${_uid}" ] && TMOUT_UIDS="${TMOUT_UIDS-} ${_uid}"
+done
+
+# Resolve nocheck usernames to UIDs and append to TMOUT_UIDS_NOCHECK
+# shellcheck disable=SC2086
+for _name in $(printf '%s\n' ${TMOUT_USERNAMES_NOCHECK-}); do
+    _uid=$(getent passwd "${_name}" 2>/dev/null | cut -d: -f3)
+    [ -n "${_uid}" ] && TMOUT_UIDS_NOCHECK="${TMOUT_UIDS_NOCHECK-} ${_uid}"
+done
+
+# Resolve group names to GIDs and append to TMOUT_GIDS
+# shellcheck disable=SC2086
+for _name in $(printf '%s\n' ${TMOUT_GROUPS-}); do
+    _gid=$(getent group "${_name}" 2>/dev/null | cut -d: -f3)
+    [ -n "${_gid}" ] && TMOUT_GIDS="${TMOUT_GIDS-} ${_gid}"
+done
+
+# Resolve nocheck group names to GIDs and append to TMOUT_GIDS_NOCHECK
+# shellcheck disable=SC2086
+for _name in $(printf '%s\n' ${TMOUT_GROUPS_NOCHECK-}); do
+    _gid=$(getent group "${_name}" 2>/dev/null | cut -d: -f3)
+    [ -n "${_gid}" ] && TMOUT_GIDS_NOCHECK="${TMOUT_GIDS_NOCHECK-} ${_gid}"
+done
 
 # ----------------------------------------------------------------------
 # Normalise and merge UID/GID lists
@@ -125,8 +161,10 @@ fi
 # Cleanup
 # ----------------------------------------------------------------------
 unset BASECFG CFGDIR
-unset _f _i _u _g _gid _match _key _value _out
+unset _f _i _u _g _gid _match _key _value _out _name _uid
 unset TMOUT_SECONDS TMOUT_READONLY
 unset TMOUT_UIDS TMOUT_UIDS_NOCHECK
 unset TMOUT_GIDS TMOUT_GIDS_NOCHECK
+unset TMOUT_USERNAMES TMOUT_USERNAMES_NOCHECK
+unset TMOUT_GROUPS TMOUT_GROUPS_NOCHECK
 unset -f _parse_config _norm_list _subtract_list
