@@ -11,7 +11,7 @@ Url:		https://github.com/fermitools/shell-timeout
 Source:		%{url}/archive/%{version}/%{name}-%{version}.tar.gz
 
 Requires:	coreutils filesystem sed
-BuildRequires:  make bash grep shellcheck shfmt
+BuildRequires:  make bash grep shellcheck
 BuildRequires:  (rubygem-asciidoctor or asciidoc)
 %if %{with tests}
 BuildRequires:	podman
@@ -29,7 +29,7 @@ after a configured period of inactivity.
 %autosetup
 
 %build
-make man shfmt
+make man
 
 %install
 # these must be in /etc/profile.d to actually work
