@@ -29,7 +29,7 @@ rpm: sources
 	rpmbuild -bb --define '_rpmdir $(current_dir)/RPMS' --define '_builddir $(current_dir)/BUILD' --define '_sourcedir $(current_dir)' $(name).spec
 
 # TODO: make this smart enough to find and include test- targets
-test: test-simple-config test-tmout-is-float test-tmout-is-negative test-tmout-is-not-readonly test-tmout-is-readonly test-tmout-is-unset test-tmout-is-zero test-config-includes-change-readonly test-config-includes-change-tmout test-config-includes-conf-only test-config-includes-extra-gid test-config-includes-extra-gid-removes-gid test-config-includes-extra-uid test-config-includes-extra-uid-removes-uid
+test: test-shellcheck test-shfmt test-simple-config test-tmout-is-float test-tmout-is-negative test-tmout-is-not-readonly test-tmout-is-readonly test-tmout-is-unset test-tmout-is-zero test-config-includes-change-readonly test-config-includes-change-tmout test-config-includes-conf-only test-config-includes-extra-gid test-config-includes-extra-gid-removes-gid test-config-includes-extra-uid test-config-includes-extra-uid-removes-uid
 
 test-basic-syntax:
 	@echo ''
@@ -37,6 +37,20 @@ test-basic-syntax:
 	@echo 'test bash script syntax'
 	@echo '--------------------------------'
 	bash -n $(current_dir)/src/shell-timeout.sh
+
+test-shellcheck: test-basic-syntax
+	@echo ''
+	@echo '--------------------------------'
+	@echo 'test shellcheck'
+	@echo '--------------------------------'
+	shellcheck $(current_dir)/src/shell-timeout.sh
+
+test-shfmt: test-basic-syntax
+	@echo ''
+	@echo '--------------------------------'
+	@echo 'test shfmt'
+	@echo '--------------------------------'
+	shfmt -d -i 4 -ci $(current_dir)/src/shell-timeout.sh
 
 test-setup-podman: | test-basic-syntax
 	@echo ''

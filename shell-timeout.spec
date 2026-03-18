@@ -12,7 +12,7 @@ Source:		%{url}/archive/%{version}/%{name}-%{version}.tar.gz
 
 Requires:	coreutils filesystem sed
 %if %{with tests}
-BuildRequires:	make podman
+BuildRequires:	make podman shellcheck shfmt
 %endif
 
 Summary:	A simple set of scripts for setting shell timeout automatically
