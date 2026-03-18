@@ -11,8 +11,9 @@ Url:		https://github.com/fermitools/shell-timeout
 Source:		%{url}/archive/%{version}/%{name}-%{version}.tar.gz
 
 Requires:	coreutils filesystem sed
+BuildRequires:  make grep
 %if %{with tests}
-BuildRequires:	make podman shellcheck shfmt
+BuildRequires:	podman shellcheck shfmt
 %endif
 
 Summary:	A simple set of scripts for setting shell timeout automatically
