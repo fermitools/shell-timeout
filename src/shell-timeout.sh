@@ -33,8 +33,12 @@ _parse_config() {
             TMOUT_GIDS_NOCHECK) TMOUT_GIDS_NOCHECK="${TMOUT_GIDS_NOCHECK-} ${_value}" ;;
             TMOUT_USERNAMES) TMOUT_USERNAMES="${TMOUT_USERNAMES-} ${_value}" ;;
             TMOUT_USERNAMES_NOCHECK) TMOUT_USERNAMES_NOCHECK="${TMOUT_USERNAMES_NOCHECK-} ${_value}" ;;
+            TMOUT_USERNAMES_NOREADONLY) TMOUT_USERNAMES_NOREADONLY="${TMOUT_USERNAMES_NOREADONLY-} ${_value}" ;;
             TMOUT_GROUPS) TMOUT_GROUPS="${TMOUT_GROUPS-} ${_value}" ;;
             TMOUT_GROUPS_NOCHECK) TMOUT_GROUPS_NOCHECK="${TMOUT_GROUPS_NOCHECK-} ${_value}" ;;
+            TMOUT_GROUPS_NOREADONLY) TMOUT_GROUPS_NOREADONLY="${TMOUT_GROUPS_NOREADONLY-} ${_value}" ;;
+            TMOUT_UIDS_NOREADONLY) TMOUT_UIDS_NOREADONLY="${TMOUT_UIDS_NOREADONLY-} ${_value}" ;;
+            TMOUT_GIDS_NOREADONLY) TMOUT_GIDS_NOREADONLY="${TMOUT_GIDS_NOREADONLY-} ${_value}" ;;
         esac
     done <"$1"
 }
@@ -111,14 +115,30 @@ for _name in $(printf '%s\n' ${TMOUT_GROUPS_NOCHECK-}); do
     [ -n "${_gid}" ] && TMOUT_GIDS_NOCHECK="${TMOUT_GIDS_NOCHECK-} ${_gid}"
 done
 
+# Resolve noreadonly usernames to UIDs and append to TMOUT_UIDS_NOREADONLY
+# shellcheck disable=SC2086
+for _name in $(printf '%s\n' ${TMOUT_USERNAMES_NOREADONLY-}); do
+    _uid=$(getent passwd "${_name}" 2>/dev/null | cut -d: -f3)
+    [ -n "${_uid}" ] && TMOUT_UIDS_NOREADONLY="${TMOUT_UIDS_NOREADONLY-} ${_uid}"
+done
+
+# Resolve noreadonly group names to GIDs and append to TMOUT_GIDS_NOREADONLY
+# shellcheck disable=SC2086
+for _name in $(printf '%s\n' ${TMOUT_GROUPS_NOREADONLY-}); do
+    _gid=$(getent group "${_name}" 2>/dev/null | cut -d: -f3)
+    [ -n "${_gid}" ] && TMOUT_GIDS_NOREADONLY="${TMOUT_GIDS_NOREADONLY-} ${_gid}"
+done
+
 # ----------------------------------------------------------------------
 # Normalise and merge UID/GID lists
 # ----------------------------------------------------------------------
 TMOUT_UIDS=$(_norm_list "${TMOUT_UIDS-}")
 TMOUT_UIDS_NOCHECK=$(_norm_list "${TMOUT_UIDS_NOCHECK-}")
+TMOUT_UIDS_NOREADONLY=$(_norm_list "${TMOUT_UIDS_NOREADONLY-}")
 
 TMOUT_GIDS=$(_norm_list "${TMOUT_GIDS-}")
 TMOUT_GIDS_NOCHECK=$(_norm_list "${TMOUT_GIDS_NOCHECK-}")
+TMOUT_GIDS_NOREADONLY=$(_norm_list "${TMOUT_GIDS_NOREADONLY-}")
 
 # Apply removals
 TMOUT_UIDS=$(_subtract_list "${TMOUT_UIDS}" "${TMOUT_UIDS_NOCHECK}")
@@ -153,7 +173,23 @@ if [ -n "$_match" ]; then
     export TMOUT
 
     case ${TMOUT_READONLY-} in
-        yes | YES | true | TRUE | 1) readonly TMOUT ;;
+        yes | YES | true | TRUE | 1)
+            # Check whether this user is exempt from readonly enforcement
+            _noreadonly=
+            # shellcheck disable=SC2086
+            for _u in $(printf '%s\n' ${TMOUT_UIDS_NOREADONLY-}); do
+                [ "${_u}" = "${UID}" ] && _noreadonly=yes && break
+            done
+            if [ -z "${_noreadonly}" ] && [ -n "${TMOUT_GIDS_NOREADONLY-}" ]; then
+                for _gid in $(id -G 2>/dev/null); do
+                    # shellcheck disable=SC2086
+                    for _g in $(printf '%s\n' ${TMOUT_GIDS_NOREADONLY-}); do
+                        [ "${_g}" = "${_gid}" ] && _noreadonly=yes && break 2
+                    done
+                done
+            fi
+            [ -z "${_noreadonly}" ] && readonly TMOUT
+            ;;
     esac
 fi
 
@@ -161,10 +197,10 @@ fi
 # Cleanup
 # ----------------------------------------------------------------------
 unset BASECFG CFGDIR
-unset _f _i _u _g _gid _match _key _value _out _name _uid
+unset _f _i _u _g _gid _match _key _value _out _name _uid _noreadonly
 unset TMOUT_SECONDS TMOUT_READONLY
-unset TMOUT_UIDS TMOUT_UIDS_NOCHECK
-unset TMOUT_GIDS TMOUT_GIDS_NOCHECK
-unset TMOUT_USERNAMES TMOUT_USERNAMES_NOCHECK
-unset TMOUT_GROUPS TMOUT_GROUPS_NOCHECK
+unset TMOUT_UIDS TMOUT_UIDS_NOCHECK TMOUT_UIDS_NOREADONLY
+unset TMOUT_GIDS TMOUT_GIDS_NOCHECK TMOUT_GIDS_NOREADONLY
+unset TMOUT_USERNAMES TMOUT_USERNAMES_NOCHECK TMOUT_USERNAMES_NOREADONLY
+unset TMOUT_GROUPS TMOUT_GROUPS_NOCHECK TMOUT_GROUPS_NOREADONLY
 unset -f _parse_config _norm_list _subtract_list
