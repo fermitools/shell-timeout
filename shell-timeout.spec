@@ -2,7 +2,7 @@
 %bcond tests 0
 
 Name:		shell-timeout
-Version:	0.2.0
+Version:	0.3.0
 Release:	%autorelease
 BuildArch:	noarch
 
@@ -35,7 +35,10 @@ make man shfmt
 # these must be in /etc/profile.d to actually work
 install -p -m 644 -D src/shell-timeout.sh  %{buildroot}%{_sysconfdir}/profile.d/shell-timeout.sh
 install -p -m 644 -D src/shell-timeout.csh %{buildroot}%{_sysconfdir}/profile.d/shell-timeout.csh
-install -p -m 644 -d man/shell-timeout.conf.5 %{buildroot}%{_mandir}/man5/
+
+mkdir -p %{buildroot}%{_mandir}/man5/
+cp -pa man/shell-timeout.conf.5 %{buildroot}%{_mandir}/man5/
+
 
 # the scripts are hard coded to check
 #   /etc/default/shell-timeout

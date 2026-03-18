@@ -33,8 +33,10 @@ sources:
 	@cp conf/* build/$(name)-$(version)/conf/
 	@mkdir -p build/$(name)-$(version)/docs/
 	@cp docs/* build/$(name)-$(version)/docs/
+	@cp $(name).spec build/$(name)-$(version)/
+	@cp Makefile build/$(name)-$(version)/
 	@cp LICENSE build/$(name)-$(version)/
-	cd build ; tar cf - $(name)-$(version) | gzip --best > $(current_dir)/$(version).tar.gz
+	cd build ; tar cf - $(name)-$(version) | gzip --best > $(current_dir)/$(name)-$(version).tar.gz
 	rm -rf build
 
 srpm: sources
