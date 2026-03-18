@@ -38,14 +38,14 @@ test-basic-syntax:
 	@echo '--------------------------------'
 	bash -n $(current_dir)/src/shell-timeout.sh
 
-test-shellcheck: test-basic-syntax
+test-shellcheck: | test-basic-syntax
 	@echo ''
 	@echo '--------------------------------'
 	@echo 'test shellcheck'
 	@echo '--------------------------------'
 	shellcheck $(current_dir)/src/shell-timeout.sh
 
-test-shfmt: test-basic-syntax
+test-shfmt: | test-basic-syntax
 	@echo ''
 	@echo '--------------------------------'
 	@echo 'test shfmt'
@@ -546,3 +546,160 @@ test-config-includes-groupname-removes-groupname: | test-build-test-container
 	podman run -u 1000:0  --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-groupname-removes-groupname:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; set"' | grep autologout | grep -q '[[:space:]]15$$'
 	podman run -u 1001:0  --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-groupname-removes-groupname:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; unset autologout"' | grep -c autologout | grep -q '^0$$'
 	podman run -u 0:3000  --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-groupname-removes-groupname:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; set"' | grep autologout | grep -q '[[:space:]]15$$'
+
+
+test-config-includes-uid-removes-by-username: | test-build-test-container
+	@echo ''
+	@echo '--------------------------------'
+	@echo 'test uid added numerically removed via username'
+	@echo '--------------------------------'
+	# bash
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-uid-removes-by-username:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-uid-removes-by-username:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q x900x
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-uid-removes-by-username:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-uid-removes-by-username:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; unset TMOUT'
+	# zsh
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-uid-removes-by-username:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-uid-removes-by-username:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q x900x
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-uid-removes-by-username:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-uid-removes-by-username:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; unset TMOUT'
+	# csh
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-uid-removes-by-username:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-uid-removes-by-username:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; set"' | grep autologout | grep -q '[[:space:]]15$$'
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-uid-removes-by-username:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-uid-removes-by-username:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; unset autologout"' | grep -c autologout | grep -q '^0$$'
+	# tcsh
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-uid-removes-by-username:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-uid-removes-by-username:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; set"' | grep autologout | grep -q '[[:space:]]15$$'
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-uid-removes-by-username:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-uid-removes-by-username:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; unset autologout"' | grep -c autologout | grep -q '^0$$'
+
+test-config-includes-username-removes-by-uid: | test-build-test-container
+	@echo ''
+	@echo '--------------------------------'
+	@echo 'test username added by name removed via numeric uid'
+	@echo '--------------------------------'
+	# bash
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-username-removes-by-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-username-removes-by-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q x900x
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-username-removes-by-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-username-removes-by-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; unset TMOUT'
+	# zsh
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-username-removes-by-uid:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-username-removes-by-uid:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q x900x
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-username-removes-by-uid:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-username-removes-by-uid:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; unset TMOUT'
+	# csh
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-username-removes-by-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-username-removes-by-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; set"' | grep autologout | grep -q '[[:space:]]15$$'
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-username-removes-by-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-username-removes-by-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; unset autologout"' | grep -c autologout | grep -q '^0$$'
+	# tcsh
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-username-removes-by-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-username-removes-by-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; set"' | grep autologout | grep -q '[[:space:]]15$$'
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-username-removes-by-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-username-removes-by-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; unset autologout"' | grep -c autologout | grep -q '^0$$'
+
+test-config-includes-gid-removes-by-groupname: | test-build-test-container
+	@echo ''
+	@echo '--------------------------------'
+	@echo 'test gid added numerically removed via groupname'
+	@echo '--------------------------------'
+	# bash
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-gid-removes-by-groupname:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-gid-removes-by-groupname:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-gid-removes-by-groupname:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q x900x
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-gid-removes-by-groupname:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; unset TMOUT'
+	# zsh
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-gid-removes-by-groupname:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-gid-removes-by-groupname:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-gid-removes-by-groupname:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q x900x
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-gid-removes-by-groupname:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; unset TMOUT'
+	# csh
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-gid-removes-by-groupname:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-gid-removes-by-groupname:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-gid-removes-by-groupname:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; set"' | grep autologout | grep -q '[[:space:]]15$$'
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-gid-removes-by-groupname:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; unset autologout"' | grep -c autologout | grep -q '^0$$'
+	# tcsh
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-gid-removes-by-groupname:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-gid-removes-by-groupname:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-gid-removes-by-groupname:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; set"' | grep autologout | grep -q '[[:space:]]15$$'
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-gid-removes-by-groupname:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; unset autologout"' | grep -c autologout | grep -q '^0$$'
+
+test-config-includes-groupname-removes-by-gid: | test-build-test-container
+	@echo ''
+	@echo '--------------------------------'
+	@echo 'test groupname added by name removed via numeric gid'
+	@echo '--------------------------------'
+	# bash
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-groupname-removes-by-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-groupname-removes-by-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-groupname-removes-by-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q x900x
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-groupname-removes-by-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; unset TMOUT'
+	# zsh
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-groupname-removes-by-gid:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-groupname-removes-by-gid:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-groupname-removes-by-gid:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q x900x
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/config-includes-groupname-removes-by-gid:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; unset TMOUT'
+	# csh
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-groupname-removes-by-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-groupname-removes-by-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-groupname-removes-by-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; set"' | grep autologout | grep -q '[[:space:]]15$$'
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-groupname-removes-by-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; unset autologout"' | grep -c autologout | grep -q '^0$$'
+	# tcsh
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-groupname-removes-by-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-groupname-removes-by-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-groupname-removes-by-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; set"' | grep autologout | grep -q '[[:space:]]15$$'
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/config-includes-groupname-removes-by-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; unset autologout"' | grep -c autologout | grep -q '^0$$'
+
+test-uid-nocheck-does-not-affect-gid: | test-build-test-container
+	@echo ''
+	@echo '--------------------------------'
+	@echo 'test uid nocheck does not prevent gid match'
+	@echo '--------------------------------'
+	# bash
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/uid-nocheck-does-not-affect-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/uid-nocheck-does-not-affect-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q x900x
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/uid-nocheck-does-not-affect-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/uid-nocheck-does-not-affect-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; unset TMOUT'
+	# zsh
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/uid-nocheck-does-not-affect-gid:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/uid-nocheck-does-not-affect-gid:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q x900x
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/uid-nocheck-does-not-affect-gid:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/uid-nocheck-does-not-affect-gid:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; unset TMOUT'
+	# csh
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/uid-nocheck-does-not-affect-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/uid-nocheck-does-not-affect-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; set"' | grep autologout | grep -q '[[:space:]]15$$'
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/uid-nocheck-does-not-affect-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/uid-nocheck-does-not-affect-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; unset autologout"' | grep -c autologout | grep -q '^0$$'
+	# tcsh
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/uid-nocheck-does-not-affect-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/uid-nocheck-does-not-affect-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; set"' | grep autologout | grep -q '[[:space:]]15$$'
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/uid-nocheck-does-not-affect-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/uid-nocheck-does-not-affect-gid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; unset autologout"' | grep -c autologout | grep -q '^0$$'
+
+test-gid-nocheck-does-not-affect-uid: | test-build-test-container
+	@echo ''
+	@echo '--------------------------------'
+	@echo 'test gid nocheck does not prevent uid match'
+	@echo '--------------------------------'
+	# bash
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/gid-nocheck-does-not-affect-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/gid-nocheck-does-not-affect-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/gid-nocheck-does-not-affect-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q x900x
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/gid-nocheck-does-not-affect-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'source /shell-timeout.sh; unset TMOUT'
+	# zsh
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/gid-nocheck-does-not-affect-uid:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/gid-nocheck-does-not-affect-uid:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q xx
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/gid-nocheck-does-not-affect-uid:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; echo "x$${TMOUT}x"' | grep -q x900x
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.sh:/shell-timeout.sh:ro,z" -v "$(current_dir)/tests/gid-nocheck-does-not-affect-uid:/etc/default:ro,z" shell-timeout:latest /bin/zsh -c 'source /shell-timeout.sh; unset TMOUT'
+	# csh
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/gid-nocheck-does-not-affect-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/gid-nocheck-does-not-affect-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/gid-nocheck-does-not-affect-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; set"' | grep autologout | grep -q '[[:space:]]15$$'
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/gid-nocheck-does-not-affect-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'csh -c "source /shell-timeout.csh; unset autologout"' | grep -c autologout | grep -q '^0$$'
+	# tcsh
+	podman run -u 0:0   --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/gid-nocheck-does-not-affect-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 0:2000 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/gid-nocheck-does-not-affect-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; set"' | grep -c autologout | grep -q '^0$$'
+	podman run -u 1000:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/gid-nocheck-does-not-affect-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; set"' | grep autologout | grep -q '[[:space:]]15$$'
+	podman run -u 1001:0 --rm -v "$(current_dir)/src/shell-timeout.csh:/shell-timeout.csh:ro,z" -v "$(current_dir)/tests/gid-nocheck-does-not-affect-uid:/etc/default:ro,z" shell-timeout:latest /bin/bash -c 'tcsh -c "source /shell-timeout.csh; unset autologout"' | grep -c autologout | grep -q '^0$$'
