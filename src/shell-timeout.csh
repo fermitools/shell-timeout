@@ -7,16 +7,20 @@ set CFGDIR  = /etc/default/shell-timeout.d
 # ----------------------------------------------------------------------
 # Variables that will be filled while parsing the config files
 # ----------------------------------------------------------------------
-set TMOUT_SECONDS           = ""
-set TMOUT_READONLY          = ""
-set TMOUT_UIDS              = ()
-set TMOUT_UIDS_NOCHECK      = ()
-set TMOUT_GIDS              = ()
-set TMOUT_GIDS_NOCHECK      = ()
-set TMOUT_USERNAMES         = ()
-set TMOUT_USERNAMES_NOCHECK = ()
-set TMOUT_GROUPS            = ()
-set TMOUT_GROUPS_NOCHECK    = ()
+set TMOUT_SECONDS              = ""
+set TMOUT_READONLY             = ""
+set TMOUT_UIDS                 = ()
+set TMOUT_UIDS_NOCHECK         = ()
+set TMOUT_GIDS                 = ()
+set TMOUT_GIDS_NOCHECK         = ()
+set TMOUT_USERNAMES            = ()
+set TMOUT_USERNAMES_NOCHECK    = ()
+set TMOUT_USERNAMES_NOREADONLY = ()
+set TMOUT_GROUPS               = ()
+set TMOUT_GROUPS_NOCHECK       = ()
+set TMOUT_GROUPS_NOREADONLY    = ()
+set TMOUT_UIDS_NOREADONLY      = ()
+set TMOUT_GIDS_NOREADONLY      = ()
 
 # ----------------------------------------------------------------------
 # Prepare config files list safely
@@ -67,11 +71,23 @@ foreach cfg ( $cfgs )
             case TMOUT_USERNAMES_NOCHECK:
                 set TMOUT_USERNAMES_NOCHECK = ( $TMOUT_USERNAMES_NOCHECK $value )
                 breaksw
+            case TMOUT_USERNAMES_NOREADONLY:
+                set TMOUT_USERNAMES_NOREADONLY = ( $TMOUT_USERNAMES_NOREADONLY $value )
+                breaksw
             case TMOUT_GROUPS:
                 set TMOUT_GROUPS = ( $TMOUT_GROUPS $value )
                 breaksw
             case TMOUT_GROUPS_NOCHECK:
                 set TMOUT_GROUPS_NOCHECK = ( $TMOUT_GROUPS_NOCHECK $value )
+                breaksw
+            case TMOUT_GROUPS_NOREADONLY:
+                set TMOUT_GROUPS_NOREADONLY = ( $TMOUT_GROUPS_NOREADONLY $value )
+                breaksw
+            case TMOUT_UIDS_NOREADONLY:
+                set TMOUT_UIDS_NOREADONLY = ( $TMOUT_UIDS_NOREADONLY $value )
+                breaksw
+            case TMOUT_GIDS_NOREADONLY:
+                set TMOUT_GIDS_NOREADONLY = ( $TMOUT_GIDS_NOREADONLY $value )
                 breaksw
         endsw
     end
@@ -110,6 +126,18 @@ foreach n__ ( $TMOUT_GROUPS_NOCHECK )
     set gid__ = ( `getent group "$n__" | cut -d: -f3` )
     if ( $#gid__ >= 0 ) set TMOUT_GIDS_NOCHECK = ( $TMOUT_GIDS_NOCHECK $gid__ )
 end
+
+# Resolve noreadonly usernames to UIDs; csh cannot enforce readonly
+#foreach n__ ( $TMOUT_USERNAMES_NOREADONLY )
+#    set uid__ = ( `getent passwd "$n__" | cut -d: -f3` )
+#    if ( $#uid__ >= 0 ) set TMOUT_UIDS_NOREADONLY = ( $TMOUT_UIDS_NOREADONLY $uid__ )
+#end
+
+# Resolve noreadonly group names to GIDs; csh cannot enforce readonly
+#foreach n__ ( $TMOUT_GROUPS_NOREADONLY )
+#    set gid__ = ( `getent group "$n__" | cut -d: -f3` )
+#    if ( $#gid__ >= 0 ) set TMOUT_GIDS_NOREADONLY = ( $TMOUT_GIDS_NOREADONLY $gid__ )
+#end
 
 # ----------------------------------------------------------------------
 # Apply removals (pad with spaces for proper pattern matching)
@@ -169,10 +197,10 @@ endif
 # ----------------------------------------------------------------------
 unset BASECFG CFGDIR
 unset TMOUT_SECONDS TMOUT_READONLY
-unset TMOUT_UIDS TMOUT_UIDS_NOCHECK
-unset TMOUT_GIDS TMOUT_GIDS_NOCHECK
-unset TMOUT_USERNAMES TMOUT_USERNAMES_NOCHECK
-unset TMOUT_GROUPS TMOUT_GROUPS_NOCHECK
+unset TMOUT_UIDS TMOUT_UIDS_NOCHECK TMOUT_UIDS_NOREADONLY
+unset TMOUT_GIDS TMOUT_GIDS_NOCHECK TMOUT_GIDS_NOREADONLY
+unset TMOUT_USERNAMES TMOUT_USERNAMES_NOCHECK TMOUT_USERNAMES_NOREADONLY
+unset TMOUT_GROUPS TMOUT_GROUPS_NOCHECK TMOUT_GROUPS_NOREADONLY
 unset cfg line key value autologout_min
 unset uids gids u__ g__ gid match CURRENT_UID
 unset n__ uid__ gid__

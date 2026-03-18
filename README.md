@@ -13,6 +13,7 @@ These scripts automatically set shell timeout values based on User ID (UID) or G
 - UID and/or GID-based timeout configuration
 - Username and group name-based timeout configuration (resolved to UIDs/GIDs at runtime)
 - Additive and subtractive list management (mix numeric IDs and names freely)
+- Per-user/group readonly exemption (`TMOUT_*_NOREADONLY`) - global readonly can be set while allowing specific trusted users to override their timeout
 - Validation of timeout values (positive integers only)
 - Can set timeout to readonly (bash/zsh)
 
@@ -107,48 +108,54 @@ TMOUT_USERNAMES_NOCHECK=alice
 
 |  Variable                   |  Description  |
 |-----------------------------|---------------|
-| `TMOUT_SECONDS`             | Timeout duration in seconds (must be positive integer)                   |
-| `TMOUT_READONLY`            | Set to `yes`/`true`/`1` to make timeout readonly - **POSIX shells only** |
-| `TMOUT_UIDS`                | Space-separated UIDs to apply timeout; all values merged                 |
-| `TMOUT_GIDS`                | Space-separated GIDs to apply timeout; all values merged                 |
-| `TMOUT_USERNAMES`           | Space-separated usernames to apply timeout; resolved to UIDs at runtime  |
-| `TMOUT_GROUPS`              | Space-separated group names to apply timeout; resolved to GIDs at runtime |
-| `TMOUT_UIDS_NOCHECK`        | UIDs to remove from consideration; all values merged                     |
-| `TMOUT_GIDS_NOCHECK`        | GIDs to remove from consideration; all values merged                     |
-| `TMOUT_USERNAMES_NOCHECK`   | Usernames to remove from consideration; resolved to UIDs at runtime      |
-| `TMOUT_GROUPS_NOCHECK`      | Group names to remove from consideration; resolved to GIDs at runtime    |
+| `TMOUT_SECONDS`             | Timeout duration in seconds (must be positive integer)                                             |
+| `TMOUT_READONLY`            | Set to `yes`/`true`/`1` to make timeout readonly - **POSIX shells only**                           |
+| `TMOUT_UIDS`                | Space-separated UIDs to apply timeout; all values merged                                           |
+| `TMOUT_GIDS`                | Space-separated GIDs to apply timeout; all values merged                                           |
+| `TMOUT_USERNAMES`           | Space-separated usernames to apply timeout; resolved to UIDs at runtime                            |
+| `TMOUT_GROUPS`              | Space-separated group names to apply timeout; resolved to GIDs at runtime                          |
+| `TMOUT_UIDS_NOCHECK`        | UIDs to remove from consideration; all values merged                                               |
+| `TMOUT_GIDS_NOCHECK`        | GIDs to remove from consideration; all values merged                                               |
+| `TMOUT_USERNAMES_NOCHECK`   | Usernames to remove from consideration; resolved to UIDs at runtime                                |
+| `TMOUT_GROUPS_NOCHECK`      | Group names to remove from consideration; resolved to GIDs at runtime                              |
+| `TMOUT_UIDS_NOREADONLY`     | UIDs exempt from readonly enforcement; timeout is still set but not locked - **POSIX shells only** |
+| `TMOUT_GIDS_NOREADONLY`     | GIDs exempt from readonly enforcement - **POSIX shells only**                                      |
+| `TMOUT_USERNAMES_NOREADONLY`| Usernames exempt from readonly enforcement; resolved to UIDs at runtime - **POSIX shells only**    |
+| `TMOUT_GROUPS_NOREADONLY`   | Group names exempt from readonly enforcement; resolved to GIDs at runtime - **POSIX shells only**  |
 
-Numeric IDs (`TMOUT_UIDS`, `TMOUT_GIDS` and their `_NOCHECK` variants) and name-based
-entries (`TMOUT_USERNAMES`, `TMOUT_GROUPS` and their `_NOCHECK` variants) can be mixed
-freely - they are resolved to the same internal lists before matching.
+Numeric IDs (`TMOUT_UIDS`, `TMOUT_GIDS` and their `_NOCHECK`/`_NOREADONLY` variants) and
+name-based entries (`TMOUT_USERNAMES`, `TMOUT_GROUPS` and their `_NOCHECK`/`_NOREADONLY`
+variants) can be mixed freely - they are resolved to the same internal lists before matching.
 
 ## How It Works
 
 1. Scripts load configuration from `/etc/default/shell-timeout`
 2. Drop-in configs from `/etc/default/shell-timeout.d/*.conf` are sourced
-3. Usernames in `TMOUT_USERNAMES`/`TMOUT_USERNAMES_NOCHECK` are resolved to UIDs via `getent passwd`
-4. Group names in `TMOUT_GROUPS`/`TMOUT_GROUPS_NOCHECK` are resolved to GIDs via `getent group`
+3. Usernames in `TMOUT_USERNAMES`/`TMOUT_USERNAMES_NOCHECK`/`TMOUT_USERNAMES_NOREADONLY` are resolved to UIDs via `getent passwd`
+4. Group names in `TMOUT_GROUPS`/`TMOUT_GROUPS_NOCHECK`/`TMOUT_GROUPS_NOREADONLY` are resolved to GIDs via `getent group`
 5. UID/GID lists are merged (base + name-resolved + drop-ins) then NOCHECK removals applied
 6. `TMOUT_SECONDS` is validated (must be positive integer)
 7. Current user's UID and GIDs (primary + secondary) are checked against the final lists
 8. If a match is found, timeout is set:
    - **POSIX shells**: Sets `TMOUT` environment variable (in seconds)
    - **C shells**: Sets `autologout` variable (converted to minutes, minimum 1)
+9. If `TMOUT_READONLY=yes` and the user is **not** in any `_NOREADONLY` list, `TMOUT` is made readonly (POSIX shells only)
 
 The UID and GID matching paths are **fully independent**: removing an entry from
 the UID list (via `TMOUT_UIDS_NOCHECK` or `TMOUT_USERNAMES_NOCHECK`) has no effect
 on GID matching, and vice versa.
 
-The `_NOCHECK` keys remove elements from the resolved UID/GID lists - they do not
-act as a veto against the *other* list. A user whose UID is in `TMOUT_UIDS_NOCHECK`
-can still have their timeout set via a GID match.
+The `_NOREADONLY` lists follow the same semantics: a user whose UID is in
+`TMOUT_UIDS_NOREADONLY` is exempt from readonly enforcement regardless of whether
+the match came from the UID or GID path.  Exemption via GID (`TMOUT_GIDS_NOREADONLY`)
+works symmetrically.
 
 ### Example:
 
-If you have groups of `0`, `100`, `1000`, each of the following configs would match your account and are functionally equal.
+If you have groups of `0`, `100`, `1000`, each of the following configs would match your account.
 
 ```ini
-TMOUT_GIDS=0
+TMOUT_GIDS=0 100
 ```
 
 ```ini
@@ -158,8 +165,10 @@ TMOUT_GIDS_NOCHECK=100
 
 ```ini
 TMOUT_GIDS=0 100 1000
-TMOUT_GIDS_NOCHECK=100 1000
+TMOUT_GIDS_NOCHECK=0 1000
 ```
+
+The all three cases are functionally equivalent.
 
 ## Shell Differences
 
@@ -199,7 +208,7 @@ TMOUT_GROUPS=auditors
 
 # Remove specific power users (mix of numeric and name)
 TMOUT_UIDS_NOCHECK=1050 1051
-TMOUT_USERNAMES_NOCHECK=trusted
+TMOUT_USERNAMES_NOCHECK=svcaccount
 ```
 
 ### Example 3: Multiple UIDs/usernames with exceptions
@@ -232,20 +241,20 @@ Invalid values cause the script to exit without setting a timeout.
   - "C shells" cannot enforce readonly - consider this when choosing the default shells for security-sensitive accounts
 - Timeouts apply per-shell session, not per SSH connection or shell scripts
   - Consider combining with SSH timeout settings for comprehensive idle timeout
-- Users can still use screen/tmux to maintain sessions, but idle shells may still terminate as it is a property of the shell itself
+- Users can still use screen/tmux to maintain sessions, but idle shells may still terminate - it is a property of the shell
 
 ## Troubleshooting
 
 ### Timeout not applied
 - Check that user's UID or GID is in the configured lists
 - Verify configuration file syntax (no syntax errors)
-- Test with: `getent` or `id` to see user's UID and GIDs
+- Test with: `getent` and `id` to see user's UID and GIDs
 - Source the script manually to see any errors
 
 ### Timeout applied when unexpected
 - Remember the `_NOCHECK` element state that the ID will not be explicitly selected
 - Verify configuration file syntax (no syntax errors)
-- Test with: `getent` or `id` to see user's UID and GIDs
+- Test with: `getent` and `id` to see user's UID and GIDs
 - Verify no secondary group is in the configutation
 - Source the script manually to see any errors
 
